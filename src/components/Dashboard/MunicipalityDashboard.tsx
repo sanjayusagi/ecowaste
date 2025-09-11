@@ -17,7 +17,8 @@ import {
   Shield,
   TrendingUp,
   Filter,
-  Search
+  Search,
+  MessageCircle
 } from 'lucide-react';
 
 const MunicipalityDashboard: React.FC = () => {
