@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import EcoChatbot from '../Chatbot/EcoChatbot';
 import {
   Camera,
   MapPin,
@@ -24,6 +25,7 @@ import {
 const CitizenDashboard: React.FC = () => {
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const [wasteImage, setWasteImage] = useState<File | null>(null);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [co2Data, setCo2Data] = useState({
     transport: 50,
     energy: 75,
@@ -291,6 +293,7 @@ const CitizenDashboard: React.FC = () => {
             className="btn-accent flex flex-col items-center p-6 rounded-2xl"
             whileHover={{ scale: 1.08, y: -5 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => setIsChatbotOpen(true)}
           >
             <MessageCircle className="h-8 w-8 text-white mb-3" />
             <span className="text-sm font-bold text-white font-body">EcoChatbot</span>
@@ -300,6 +303,7 @@ const CitizenDashboard: React.FC = () => {
             className="bg-gradient-to-r from-purple-500 to-pink-500 flex flex-col items-center p-6 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-108 transition-all duration-300"
             whileHover={{ scale: 1.08, y: -5 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => setIsChatbotOpen(true)}
           >
             <Trophy className="h-8 w-8 text-white mb-3" />
             <span className="text-sm font-bold text-white font-body">Leaderboard</span>
@@ -336,10 +340,17 @@ const CitizenDashboard: React.FC = () => {
               repeatType: "loop"
             }
           }}
+          onClick={() => setIsChatbotOpen(true)}
         >
           <MessageCircle className="h-7 w-7" />
         </motion.button>
       </motion.div>
+
+      {/* EcoChatbot */}
+      <EcoChatbot 
+        isOpen={isChatbotOpen} 
+        onClose={() => setIsChatbotOpen(false)} 
+      />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import EcoChatbot from '../Chatbot/EcoChatbot';
 import {
   Heart,
   Droplets,
@@ -22,6 +23,7 @@ import {
 
 const HospitalDashboard: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState('blood-management');
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
   const stats = [
     { label: 'Blood Units Available', value: '245', icon: Droplets, color: 'text-red-600', bg: 'bg-red-50', trend: '+12 today' },
@@ -492,6 +494,47 @@ const HospitalDashboard: React.FC = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* EcoChatbot Floating Button */}
+      <motion.div
+        className="fixed bottom-6 right-6 z-40"
+        initial={{ scale: 0, rotate: -180 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ duration: 0.6, delay: 1 }}
+      >
+        <motion.button
+          className="bg-gradient-to-r from-eco-400 to-nature-400 p-5 rounded-full shadow-2xl text-white"
+          whileHover={{ 
+            scale: 1.15,
+            rotate: 360,
+            boxShadow: "0 15px 40px rgba(34, 197, 94, 0.4)"
+          }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsChatbotOpen(true)}
+          animate={{
+            boxShadow: [
+              "0 0 0 0 rgba(34, 197, 94, 0.7)",
+              "0 0 0 15px rgba(34, 197, 94, 0)",
+              "0 0 0 0 rgba(34, 197, 94, 0)"
+            ]
+          }}
+          transition={{
+            boxShadow: {
+              duration: 2,
+              repeat: Infinity,
+              repeatType: "loop"
+            }
+          }}
+        >
+          <Heart className="h-7 w-7" />
+        </motion.button>
+      </motion.div>
+
+      {/* EcoChatbot */}
+      <EcoChatbot 
+        isOpen={isChatbotOpen} 
+        onClose={() => setIsChatbotOpen(false)} 
+      />
     </div>
   );
 };

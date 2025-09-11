@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import EcoChatbot from '../Chatbot/EcoChatbot';
 import {
   MapPin,
   AlertTriangle,
@@ -22,6 +23,7 @@ import {
 const MunicipalityDashboard: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
   const stats = [
     { label: 'Pending Reports', value: '127', icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-50', trend: '+5%' },
@@ -439,6 +441,47 @@ const MunicipalityDashboard: React.FC = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* EcoChatbot Floating Button */}
+      <motion.div
+        className="fixed bottom-6 right-6 z-40"
+        initial={{ scale: 0, rotate: -180 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ duration: 0.6, delay: 1 }}
+      >
+        <motion.button
+          className="bg-gradient-to-r from-eco-400 to-nature-400 p-5 rounded-full shadow-2xl text-white"
+          whileHover={{ 
+            scale: 1.15,
+            rotate: 360,
+            boxShadow: "0 15px 40px rgba(34, 197, 94, 0.4)"
+          }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsChatbotOpen(true)}
+          animate={{
+            boxShadow: [
+              "0 0 0 0 rgba(34, 197, 94, 0.7)",
+              "0 0 0 15px rgba(34, 197, 94, 0)",
+              "0 0 0 0 rgba(34, 197, 94, 0)"
+            ]
+          }}
+          transition={{
+            boxShadow: {
+              duration: 2,
+              repeat: Infinity,
+              repeatType: "loop"
+            }
+          }}
+        >
+          <MessageCircle className="h-7 w-7" />
+        </motion.button>
+      </motion.div>
+
+      {/* EcoChatbot */}
+      <EcoChatbot 
+        isOpen={isChatbotOpen} 
+        onClose={() => setIsChatbotOpen(false)} 
+      />
     </div>
   );
 };
