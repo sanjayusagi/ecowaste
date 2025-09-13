@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import EcoChatbot from '../Chatbot/EcoChatbot';
 import WasteReportModal from '../WasteClassifier/WasteReportModal';
+import WasteReportModal from '../WasteClassifier/WasteReportModal';
 import {
   Camera,
   MapPin,
@@ -25,8 +26,8 @@ import {
 
 const CitizenDashboard: React.FC = () => {
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
-  const [wasteImage, setWasteImage] = useState<File | null>(null);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  const [isWasteReportOpen, setIsWasteReportOpen] = useState(false);
   const [isWasteReportOpen, setIsWasteReportOpen] = useState(false);
   const [co2Data, setCo2Data] = useState({
     transport: 50,
@@ -287,6 +288,7 @@ const CitizenDashboard: React.FC = () => {
             className="btn-secondary flex flex-col items-center p-6 rounded-2xl"
             whileHover={{ scale: 1.08, y: -5 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => setIsWasteReportOpen(true)}
           >
             <Gift className="h-8 w-8 text-white mb-3" />
             <span className="text-sm font-bold text-white font-body">Donate Items</span>
@@ -353,6 +355,16 @@ const CitizenDashboard: React.FC = () => {
       <EcoChatbot 
         isOpen={isChatbotOpen} 
         onClose={() => setIsChatbotOpen(false)} 
+      />
+
+      {/* Waste Report Modal */}
+      <WasteReportModal
+        isOpen={isWasteReportOpen}
+        onClose={() => setIsWasteReportOpen(false)}
+        onSuccess={(result) => {
+          console.log('Waste classification result:', result);
+          // You can update the user's points or show a success message here
+        }}
       />
 
       {/* Waste Report Modal */}

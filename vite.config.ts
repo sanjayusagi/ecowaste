@@ -13,6 +13,14 @@ export default defineConfig({
       }
     }
   },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:54321',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '/functions/v1')
+      }
+    }
+  },
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
