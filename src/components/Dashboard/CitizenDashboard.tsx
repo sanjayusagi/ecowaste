@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import EcoChatbot from '../Chatbot/EcoChatbot';
 import WasteReportModal from '../WasteClassifier/WasteReportModal';
+import EcoEducationModal from '../EcoEducation/EcoEducationModal';
 import {
   Camera,
   MapPin,
@@ -27,6 +28,7 @@ const CitizenDashboard: React.FC = () => {
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [isWasteReportOpen, setIsWasteReportOpen] = useState(false);
+  const [isEcoEducationOpen, setIsEcoEducationOpen] = useState(false);
   const [co2Data, setCo2Data] = useState({
     transport: 50,
     energy: 75,
@@ -197,7 +199,15 @@ const CitizenDashboard: React.FC = () => {
               boxShadow: "0 25px 50px rgba(0,0,0,0.15)"
             }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setSelectedFeature(feature.id)}
+            onClick={() => {
+              if (feature.id === 'waste-report') {
+                setIsWasteReportOpen(true);
+              } else if (feature.id === 'eco-education') {
+                setIsEcoEducationOpen(true);
+              } else {
+                setSelectedFeature(feature.id);
+              }
+            }}
           >
             <div className={`${feature.color} p-6 relative overflow-hidden`}>
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
@@ -296,10 +306,10 @@ const CitizenDashboard: React.FC = () => {
             className="btn-accent flex flex-col items-center p-6 rounded-2xl"
             whileHover={{ scale: 1.08, y: -5 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setIsChatbotOpen(true)}
+            onClick={() => setIsEcoEducationOpen(true)}
           >
-            <MessageCircle className="h-8 w-8 text-white mb-3" />
-            <span className="text-sm font-bold text-white font-body">EcoChatbot</span>
+            <BookOpen className="h-8 w-8 text-white mb-3" />
+            <span className="text-sm font-bold text-white font-body">Eco Education</span>
           </motion.button>
           
           <motion.button
@@ -363,6 +373,12 @@ const CitizenDashboard: React.FC = () => {
           console.log('Waste classification result:', result);
           // You can update the user's points or show a success message here
         }}
+      />
+
+      {/* Eco Education Modal */}
+      <EcoEducationModal
+        isOpen={isEcoEducationOpen}
+        onClose={() => setIsEcoEducationOpen(false)}
       />
 
     </div>

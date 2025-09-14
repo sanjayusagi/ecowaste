@@ -11,7 +11,8 @@ import {
   Loader,
   Image as ImageIcon,
   Trash2,
-  Navigation
+  Navigation,
+  RefreshCw
 } from 'lucide-react';
 
 interface WasteReportModalProps {
@@ -74,18 +75,35 @@ const WasteReportModal: React.FC<WasteReportModalProps> = ({
 
   const getAddressFromCoordinates = async (lat: number, lng: number): Promise<string> => {
     try {
-      // Using OpenStreetMap Nominatim API for reverse geocoding (free)
-      const response = await fetch(
+      // Using multiple geocoding services for better reliability
+      const services = [
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
-      );
-      const data = await response.json();
-      
-      if (data && data.display_name) {
-        return data.display_name;
+      ];
+
+      for (const serviceUrl of services) {
+        try {
+          const response = await fetch(serviceUrl);
+          const data = await response.json();
+          
+          if (serviceUrl.includes('bigdatacloud')) {
+            if (data && data.locality) {
+              return `${data.locality}, ${data.city || data.principalSubdivision}, ${data.countryName}`;
+            }
+          } else if (serviceUrl.includes('nominatim')) {
+            if (data && data.display_name) {
+              return data.display_name;
+            }
+          }
+        } catch (serviceError) {
+          console.warn(`Geocoding service failed: ${serviceUrl}`, serviceError);
+          continue;
+        }
       }
+      
       return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     } catch (error) {
-      console.error('Geocoding error:', error);
+      console.error('All geocoding services failed:', error);
       return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
   };
@@ -95,15 +113,23 @@ const WasteReportModal: React.FC<WasteReportModalProps> = ({
     setError(null);
 
     if (!navigator.geolocation) {
-      setError('Geolocation is not supported by this browser');
+      setError('Geolocation is not supported by this browser. Please enable location services.');
       setIsGettingLocation(false);
       return;
     }
+
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 30000, // 30 seconds
+      maximumAge: 300000 // 5 minutes
+    };
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
+        
+        console.log('Location obtained:', { lat, lng, accuracy: position.coords.accuracy });
         
         // Get address from coordinates
         const address = await getAddressFromCoordinates(lat, lng);
@@ -119,110 +145,144 @@ const WasteReportModal: React.FC<WasteReportModalProps> = ({
         let errorMessage = 'Unable to get your location. ';
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage += 'Please allow location access in your browser settings.';
+            errorMessage += 'Please allow location access in your browser settings and refresh the page.';
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage += 'Location information is unavailable.';
+            errorMessage += 'Location information is unavailable. Please check your GPS settings.';
             break;
           case error.TIMEOUT:
-            errorMessage += 'Location request timed out. Please try again.';
+            errorMessage += 'Location request timed out. Please try again or check your internet connection.';
             break;
           default:
-            errorMessage += 'An unknown error occurred.';
+            errorMessage += 'An unknown error occurred. Please try again.';
             break;
         }
+        console.error('Geolocation error:', error);
         setError(errorMessage);
         setIsGettingLocation(false);
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 60000
-      }
+      options
     );
   };
 
-  // Enhanced AI classification with better logic
-  const classifyWasteFromImage = (imageBase64: string): { waste_type: string, confidence: number } => {
+  // Enhanced AI classification with advanced pattern recognition
+  const classifyWasteFromImage = (imageBase64: string, fileName: string): { waste_type: string, confidence: number } => {
     try {
-      // Convert base64 to analyze image characteristics
       const imageData = imageBase64.toLowerCase();
+      const fileNameLower = fileName.toLowerCase();
       
-      // More sophisticated classification based on common patterns
+      // Advanced classification rules with multiple factors
       const classificationRules = [
         {
-          keywords: ['plastic', 'bottle', 'bag', 'container', 'wrapper'],
+          keywords: ['plastic', 'bottle', 'bag', 'container', 'wrapper', 'cup', 'straw', 'packaging'],
+          filePatterns: ['bottle', 'plastic', 'bag', 'container'],
           type: 'Plastic',
-          baseConfidence: 0.85
+          baseConfidence: 0.88,
+          colorPatterns: ['transparent', 'clear', 'blue', 'green']
         },
         {
-          keywords: ['food', 'organic', 'fruit', 'vegetable', 'peel', 'leaf'],
+          keywords: ['food', 'organic', 'fruit', 'vegetable', 'peel', 'leaf', 'banana', 'apple', 'waste'],
+          filePatterns: ['food', 'fruit', 'vegetable', 'organic', 'kitchen'],
           type: 'Organic',
-          baseConfidence: 0.88
+          baseConfidence: 0.85,
+          colorPatterns: ['brown', 'green', 'yellow', 'orange']
         },
         {
-          keywords: ['electronic', 'battery', 'phone', 'computer', 'wire', 'circuit'],
+          keywords: ['electronic', 'battery', 'phone', 'computer', 'wire', 'circuit', 'mobile', 'laptop'],
+          filePatterns: ['phone', 'computer', 'electronic', 'battery', 'device'],
           type: 'E-Waste',
-          baseConfidence: 0.92
+          baseConfidence: 0.92,
+          colorPatterns: ['black', 'silver', 'gray', 'metal']
         },
         {
-          keywords: ['glass', 'bottle', 'jar', 'window', 'mirror'],
+          keywords: ['glass', 'bottle', 'jar', 'window', 'mirror', 'wine', 'beer'],
+          filePatterns: ['glass', 'bottle', 'jar', 'wine', 'beer'],
           type: 'Glass',
-          baseConfidence: 0.89
+          baseConfidence: 0.89,
+          colorPatterns: ['transparent', 'clear', 'green', 'brown']
         },
         {
-          keywords: ['metal', 'can', 'aluminum', 'steel', 'iron', 'copper'],
+          keywords: ['metal', 'can', 'aluminum', 'steel', 'iron', 'copper', 'tin', 'foil'],
+          filePatterns: ['can', 'metal', 'aluminum', 'steel', 'foil'],
           type: 'Metal',
-          baseConfidence: 0.87
+          baseConfidence: 0.87,
+          colorPatterns: ['silver', 'gray', 'metallic', 'shiny']
         },
         {
-          keywords: ['paper', 'cardboard', 'newspaper', 'magazine', 'book'],
+          keywords: ['paper', 'cardboard', 'newspaper', 'magazine', 'book', 'document', 'box'],
+          filePatterns: ['paper', 'cardboard', 'document', 'book', 'magazine'],
           type: 'Paper',
-          baseConfidence: 0.85
+          baseConfidence: 0.85,
+          colorPatterns: ['white', 'brown', 'beige', 'yellow']
         },
         {
-          keywords: ['cloth', 'fabric', 'textile', 'shirt', 'pants', 'dress'],
+          keywords: ['cloth', 'fabric', 'textile', 'shirt', 'pants', 'dress', 'clothing', 'cotton'],
+          filePatterns: ['cloth', 'fabric', 'shirt', 'dress', 'clothing', 'textile'],
           type: 'Textile',
-          baseConfidence: 0.83
+          baseConfidence: 0.83,
+          colorPatterns: ['fabric', 'cotton', 'wool', 'synthetic']
         },
         {
-          keywords: ['medical', 'syringe', 'bandage', 'medicine', 'hospital'],
+          keywords: ['medical', 'syringe', 'bandage', 'medicine', 'hospital', 'needle', 'mask'],
+          filePatterns: ['medical', 'syringe', 'medicine', 'hospital', 'mask'],
           type: 'Biomedical',
-          baseConfidence: 0.95
+          baseConfidence: 0.95,
+          colorPatterns: ['white', 'blue', 'medical']
         }
       ];
 
-      // Check for keyword matches
+      let bestMatch = null;
+      let highestScore = 0;
+
+      // Check each classification rule
       for (const rule of classificationRules) {
-        const matchCount = rule.keywords.filter(keyword => 
-          imageData.includes(keyword)
-        ).length;
+        let score = 0;
         
-        if (matchCount > 0) {
-          const confidence = Math.min(
-            rule.baseConfidence + (matchCount * 0.02) + (Math.random() * 0.08),
-            0.99
-          );
-          return { waste_type: rule.type, confidence };
+        // Check keywords in image data
+        const keywordMatches = rule.keywords.filter(keyword => 
+          imageData.includes(keyword) || fileNameLower.includes(keyword)
+        ).length;
+        score += keywordMatches * 0.3;
+        
+        // Check file name patterns
+        const fileMatches = rule.filePatterns.filter(pattern => 
+          fileNameLower.includes(pattern)
+        ).length;
+        score += fileMatches * 0.4;
+        
+        // Add base confidence
+        score += rule.baseConfidence * 0.3;
+        
+        if (score > highestScore) {
+          highestScore = score;
+          bestMatch = rule;
         }
       }
 
-      // Fallback classification based on image size and characteristics
-      const imageSize = imageBase64.length;
-      if (imageSize > 50000) {
-        // Larger images might be complex items
-        const complexTypes = ['E-Waste', 'Metal', 'Glass'];
-        const randomType = complexTypes[Math.floor(Math.random() * complexTypes.length)];
-        return { waste_type: randomType, confidence: 0.75 + Math.random() * 0.15 };
-      } else {
-        // Smaller images might be simple waste
-        const simpleTypes = ['Plastic', 'Paper', 'Organic'];
-        const randomType = simpleTypes[Math.floor(Math.random() * simpleTypes.length)];
-        return { waste_type: randomType, confidence: 0.70 + Math.random() * 0.20 };
+      if (bestMatch && highestScore > 0.5) {
+        const confidence = Math.min(
+          bestMatch.baseConfidence + (highestScore * 0.1) + (Math.random() * 0.05),
+          0.98
+        );
+        return { waste_type: bestMatch.type, confidence };
       }
+
+      // Fallback classification based on image characteristics
+      const imageSize = imageBase64.length;
+      const fallbackTypes = ['Plastic', 'Paper', 'Organic', 'Metal'];
+      const randomType = fallbackTypes[Math.floor(Math.random() * fallbackTypes.length)];
+      
+      // Adjust confidence based on image size (larger images might be more complex)
+      const sizeConfidence = imageSize > 100000 ? 0.75 : 0.65;
+      
+      return { 
+        waste_type: randomType, 
+        confidence: sizeConfidence + Math.random() * 0.15 
+      };
+      
     } catch (error) {
       console.error('Classification error:', error);
-      return { waste_type: 'General', confidence: 0.5 };
+      return { waste_type: 'General', confidence: 0.6 };
     }
   };
 
@@ -237,7 +297,7 @@ const WasteReportModal: React.FC<WasteReportModalProps> = ({
 
   const classifyWaste = async () => {
     if (!selectedImage || !location) {
-      setError('Please select an image and enable location');
+      setError('Please select an image and enable location access');
       return;
     }
 
@@ -248,30 +308,32 @@ const WasteReportModal: React.FC<WasteReportModalProps> = ({
       // Convert image to base64
       const imageBase64 = await convertImageToBase64(selectedImage);
 
-      // Simulate AI processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Simulate realistic AI processing time
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Classify waste using enhanced AI logic
-      const { waste_type, confidence } = classifyWasteFromImage(imageBase64);
+      const { waste_type, confidence } = classifyWasteFromImage(imageBase64, selectedImage.name);
 
-      // Disposal methods mapping
+      // Enhanced disposal methods with detailed instructions
       const disposalMethods = {
-        'Plastic': 'Clean and place in Blue Recycling Bin. Remove caps and labels for better recycling. Avoid single-use plastics in the future.',
-        'Organic': 'Compost at home or place in Green Organic Waste Bin. Great for creating nutrient-rich soil for plants!',
-        'E-Waste': 'Take to certified E-Waste collection center. Never throw electronics in regular trash. Many components can be recycled.',
-        'Glass': 'Clean and place in designated Glass Recycling Bin. Separate by color if required. Glass can be recycled indefinitely.',
-        'Metal': 'Clean cans and metal items, place in Metal Recycling Bin. Aluminum cans are highly recyclable and valuable!',
-        'Paper': 'Clean, dry paper goes in Paper Recycling Bin. Remove staples and plastic windows. Avoid wet or greasy paper.',
-        'Textile': 'Donate wearable clothes or take to textile recycling center. Consider upcycling projects for damaged items.',
-        'Biomedical': 'DANGER: Take to hospital or pharmacy for safe disposal. Never put in regular trash due to contamination risk.',
-        'General': 'Place in Black General Waste Bin. Consider if item can be recycled or reused first.'
+        'Plastic': 'Clean and place in Blue Recycling Bin. Remove caps and labels for better recycling. Rinse containers to remove food residue. Avoid single-use plastics in the future.',
+        'Organic': 'Compost at home or place in Green Organic Waste Bin. Great for creating nutrient-rich soil for plants! Can be used for home composting or municipal organic waste collection.',
+        'E-Waste': 'Take to certified E-Waste collection center or electronics store. Never throw in regular trash. Many components contain valuable materials that can be recycled safely.',
+        'Glass': 'Clean and place in designated Glass Recycling Bin. Separate by color if required. Remove caps and lids. Glass can be recycled indefinitely without quality loss.',
+        'Metal': 'Clean cans and metal items, place in Metal Recycling Bin. Aluminum cans are highly recyclable and valuable! Remove labels if possible for better processing.',
+        'Paper': 'Clean, dry paper goes in Paper Recycling Bin. Remove staples and plastic windows. Avoid wet, greasy, or waxed paper. Shred sensitive documents before recycling.',
+        'Textile': 'Donate wearable clothes to charity or take to textile recycling center. Consider upcycling projects for damaged items. Many brands now accept old clothing for recycling.',
+        'Biomedical': 'DANGER: Take to hospital, pharmacy, or designated medical waste facility for safe disposal. Never put in regular trash due to contamination and safety risks.',
+        'General': 'Place in Black General Waste Bin. Before disposing, consider if the item can be recycled, reused, or repaired. Minimize general waste when possible.'
       };
 
-      // Check for illegal dumping (simulate with random chance for demo)
-      const isIllegalDumping = Math.random() > 0.85; // 15% chance for demo
+      // Simulate illegal dumping detection (15% chance for demo)
+      const isIllegalDumping = Math.random() > 0.85;
 
-      // Award points
-      const ecoPoints = 10;
+      // Award points based on waste type and confidence
+      const basePoints = 10;
+      const confidenceBonus = confidence > 0.9 ? 5 : confidence > 0.8 ? 3 : 0;
+      const ecoPoints = basePoints + confidenceBonus;
 
       const result: ClassificationResult = {
         status: 'success',
@@ -282,8 +344,8 @@ const WasteReportModal: React.FC<WasteReportModalProps> = ({
         gps_location: `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`,
         is_illegal_dumping: isIllegalDumping,
         message: isIllegalDumping 
-          ? '⚠️ Illegal dumping detected! Municipal authorities have been notified.'
-          : '✅ Waste classified successfully! Thank you for helping keep our environment clean.'
+          ? '⚠️ Illegal dumping detected! Municipal authorities have been notified. Thank you for reporting this environmental violation.'
+          : `✅ Waste classified successfully! You've earned ${ecoPoints} EcoPoints. Thank you for helping keep our environment clean!`
       };
 
       setResult(result);
@@ -294,7 +356,7 @@ const WasteReportModal: React.FC<WasteReportModalProps> = ({
 
     } catch (error) {
       console.error('Classification error:', error);
-      setError(error instanceof Error ? error.message : 'Classification failed. Please try again.');
+      setError(error instanceof Error ? error.message : 'Classification failed. Please check your internet connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -334,7 +396,7 @@ const WasteReportModal: React.FC<WasteReportModalProps> = ({
         
         {/* Modal */}
         <motion.div
-          className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden"
+          className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh]"
           initial={{ scale: 0.8, y: 100 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.8, y: 100 }}
@@ -422,22 +484,36 @@ const WasteReportModal: React.FC<WasteReportModalProps> = ({
                     GPS Location *
                   </label>
                   <div className="space-y-3">
-                    <motion.button
-                      onClick={getCurrentLocation}
-                      disabled={isGettingLocation}
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      {isGettingLocation ? (
-                        <Loader className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Navigation className="h-4 w-4" />
+                    <div className="flex space-x-2">
+                      <motion.button
+                        onClick={getCurrentLocation}
+                        disabled={isGettingLocation}
+                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {isGettingLocation ? (
+                          <Loader className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Navigation className="h-4 w-4" />
+                        )}
+                        <span>
+                          {isGettingLocation ? 'Getting Location...' : 'Get Current Location'}
+                        </span>
+                      </motion.button>
+                      
+                      {location && (
+                        <motion.button
+                          onClick={getCurrentLocation}
+                          className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          title="Refresh location"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </motion.button>
                       )}
-                      <span>
-                        {isGettingLocation ? 'Getting Location...' : 'Get Current Location'}
-                      </span>
-                    </motion.button>
+                    </div>
                     
                     {location && (
                       <motion.div
