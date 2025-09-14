@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import EcoChatbot from '../Chatbot/EcoChatbot';
 import WasteReportModal from '../WasteClassifier/WasteReportModal';
-import WasteReportModal from '../WasteClassifier/WasteReportModal';
 import {
   Camera,
   MapPin,
@@ -27,7 +26,6 @@ import {
 const CitizenDashboard: React.FC = () => {
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
-  const [isWasteReportOpen, setIsWasteReportOpen] = useState(false);
   const [isWasteReportOpen, setIsWasteReportOpen] = useState(false);
   const [co2Data, setCo2Data] = useState({
     transport: 50,
@@ -367,15 +365,6 @@ const CitizenDashboard: React.FC = () => {
         }}
       />
 
-      {/* Waste Report Modal */}
-      <WasteReportModal
-        isOpen={isWasteReportOpen}
-        onClose={() => setIsWasteReportOpen(false)}
-        onSuccess={(result) => {
-          console.log('Waste classification result:', result);
-          // You can update the user's points or show a success message here
-        }}
-      />
     </div>
   );
 };
